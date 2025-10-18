@@ -1,0 +1,97 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using first_.NET_project.Dtos;
+using first_.NET_project.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+
+namespace first_.NET_project.Controllers;
+
+//normal şartlarda MVC de controller dan kalıtım alırdık. Ama API projelerinde ControllerBase den alırız. Ve burası API ise mutlaka [ApiController] attribute unu eklemeliyiz. Ve Route attribute unu eklemeliyiz.
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    private readonly UserManager<AppUser> _userManager;
+    private readonly SignInManager<AppUser> _signInManager;
+    private readonly IConfiguration _config;
+
+
+    public AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IConfiguration config)
+    {
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _config = config;
+    }
+
+    [HttpPost("register")]
+    
+    public async Task<IActionResult> Register([FromBody] RegisterRequest dto)
+    {
+        var exists = await _userManager.FindByEmailAsync(dto.Email);
+        if (exists is not null)
+        {
+            return Conflict(new { message = "Bu email zaten kayıtlı." });
+        }
+
+        var user = new AppUser
+        {
+            Email = dto.Email,
+            UserName = dto.Email,
+            FullName = dto.FullName
+        };
+
+        var result = await _userManager.CreateAsync(user, dto.Password);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+        }
+
+        var token = GenerateToken(user);
+        return Ok(token);
+        
+    }
+
+    private object GenerateToken(AppUser user)
+    {
+        var jwt = _config.GetSection("JWTSettings");
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
+
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub,user.Id),
+            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new (ClaimTypes.NameIdentifier, user.Id),
+            new (ClaimTypes.Name, user.UserName ?? user.Email ?? "")
+        };
+
+        var expires = DateTime.UtcNow.AddMinutes(double.Parse(jwt["ExpireMinutes"]!));
+
+        var token = new JwtSecurityToken(
+            issuer: jwt["Issuer"],
+            audience: jwt["Audience"],
+            claims: claims,
+            expires: expires,
+            signingCredentials: creds
+        );
+
+        return new first_.NET_project.Dtos.AuthResponse
+        {
+            Token = new JwtSecurityTokenHandler().WriteToken(token),
+            ExpiresAt = expires,
+            Email = user.Email ?? "",
+            FullName = user.FullName
+        };
+         
+    }
+}
+
+//Constructor: bu API biri bir istekte bulunduğunda ilk olarak burası çalışacak. Ondan sonra diğer metodlar çalışacak. Burada UserManager ve SignInManager ı enjekte ettik. IConfiguration ı da enjekte ettik ki appsettings.json a erişebilelim. Yani ilk çalışan method diyebiliriz.
+
+
