@@ -1,5 +1,6 @@
 using first_.NET_project.Data;
 using first_.NET_project.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,4 +24,4 @@ builder.Services.AddIdentityCore<AppUser>(
         options.Password.RequireUppercase = false;
         options.Password.RequireLowercase = false;
     }
-);
+).AddEntityFrameworkStores<AppDbContext>().AddSignInManager();
