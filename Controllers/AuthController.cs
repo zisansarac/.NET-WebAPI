@@ -28,7 +28,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    
+
     public async Task<IActionResult> Register([FromBody] RegisterRequest dto)
     {
         var exists = await _userManager.FindByEmailAsync(dto.Email);
@@ -52,7 +52,19 @@ public class AuthController : ControllerBase
 
         var token = GenerateToken(user);
         return Ok(token);
-        
+
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest dto)
+    {
+        var user = await _userManager.FindByEmailAsync(dto.Email);
+        if (user is null)
+        {
+            return Unauthorized(new { message = "Kullanıcı bulunamadı." });
+        }
+
+         
     }
 
     private object GenerateToken(AppUser user)
