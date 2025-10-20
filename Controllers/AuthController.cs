@@ -9,7 +9,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace first_.NET_project.Controllers;
 
-//normal şartlarda MVC de controller dan kalıtım alırdık. Ama API projelerinde ControllerBase den alırız. Ve burası API ise mutlaka [ApiController] attribute unu eklemeliyiz. Ve Route attribute unu eklemeliyiz.
 
 [ApiController]
 [Route("api/[controller]")]
@@ -110,7 +109,5 @@ public class AuthController : ControllerBase
          
     }
 }
-
-//Constructor: bu API biri bir istekte bulunduğunda ilk olarak burası çalışacak. Ondan sonra diğer metodlar çalışacak. Burada UserManager ve SignInManager ı enjekte ettik. IConfiguration ı da enjekte ettik ki appsettings.json a erişebilelim. Yani ilk çalışan method diyebiliriz.
 
 
