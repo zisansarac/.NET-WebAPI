@@ -64,7 +64,14 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Kullanıcı bulunamadı." });
         }
 
-         
+        var check = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: false);
+        if (!check.Succeeded)
+        {
+            return Unauthorized(new { message = "E-posta veya şifre hatalı." });
+        }
+        var token = GenerateToken(user);
+        return Ok(token);
+   
     }
 
     private object GenerateToken(AppUser user)
