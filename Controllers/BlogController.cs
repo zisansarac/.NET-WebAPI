@@ -156,7 +156,7 @@ public class BlogController : ControllerBase
 
     [HttpPut("{id:int}")]
     [Authorize]
-    public async Task<IActionResult> Update(int id, [FromBody]BlogUpdateRequest dto)
+    public async Task<IActionResult> Update(int id, [FromBody] BlogUpdateRequest dto)
     {
         var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -188,14 +188,24 @@ public class BlogController : ControllerBase
         entity.IsPublished = dto.IsPublished;
         entity.UpdatedAt = DateTime.UtcNow;
 
+        _db.BlogPosts.Update(entity);
         await _db.SaveChangesAsync();
         return NoContent();
     }
 
+    [HttpDelete("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+        var entity = await _db.BlogPosts.FirstOrDefaultAsync(x => x.Id == id);
+        if (entity is null) return NotFound();
+        if (entity.AuthorId != uid) return Forbid();
 
-    
+        _db.BlogPosts.Remove(entity);
+        await _db.SaveChangesAsync();
+        return NoContent();
 
-
-    
+    }    
 }
