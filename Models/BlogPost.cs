@@ -23,7 +23,7 @@ public class BlogPost
     public AppUser? Author { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdateAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public bool IsPublished { get; set; } = true;
 
 }
