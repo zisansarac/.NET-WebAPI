@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using first_.NET_project.Data;
 using first_.NET_project.Dtos;
+using first_.NET_project.Models;
+using first_.NET_project.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -81,7 +83,7 @@ public class BlogController : ControllerBase
 
     [HttpGet("{slug}")]
     [AllowAnonymous]
-    public async Task<ActionResult<BlogResponse>>GetBySlug(string slug)
+    public async Task<ActionResult<BlogResponse>> GetBySlug(string slug)
     {
         var b = await _db.BlogPosts
         .Include(x => x.Author)
@@ -109,4 +111,50 @@ public class BlogController : ControllerBase
             AuthorFullName = b.Author?.FullName,
         });
     }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<ActionResult<BlogResponse>> Create([FromBody] BlogCreateRequest dto)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var baseSlug = SlugHelper.ToSlug(dto.Title);
+        var slug = baseSlug;
+        int i = 2;
+        while (await _db.BlogPosts.AnyAsync(x => x.Slug == slug))
+        {
+            slug = $"{baseSlug}-{i}";
+            i++;
+
+        }
+        var entity = new BlogPost
+        {
+            Title = dto.Title,
+            Slug = slug,
+            Content = dto.Content,
+            IsPublished = dto.IsPublished,
+            AuthorId = uid,
+            CreatedAt = DateTime.UtcNow
+        };
+        //burdan gelen veriyi veri tabanına ekliyor.
+        _db.BlogPosts.Add(entity);
+        await _db.SaveChangesAsync();
+
+        var resp = new BlogResponse
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            Slug = entity.Slug,
+            Content = entity.Content,
+            IsPublished = entity.IsPublished,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt,
+            AuthorId = entity.AuthorId
+        };
+        return CreatedAtAction(nameof(GetBySlug), new { slug = entity.Slug }, resp);
+    }
+    
+    
+
+    
 }
