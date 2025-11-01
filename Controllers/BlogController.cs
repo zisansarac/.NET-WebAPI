@@ -116,7 +116,7 @@ public class BlogController : ControllerBase
     [Authorize]
     public async Task<ActionResult<BlogResponse>> Create([FromBody] BlogCreateRequest dto)
     {
-        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
         var baseSlug = SlugHelper.ToSlug(dto.Title);
         var slug = baseSlug;
@@ -153,8 +153,49 @@ public class BlogController : ControllerBase
         };
         return CreatedAtAction(nameof(GetBySlug), new { slug = entity.Slug }, resp);
     }
+
+    [HttpPut("{id:int}")]
+    [Authorize]
+    public async Task<IActionResult> Update(int id, [FromBody]BlogUpdateRequest dto)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        var entity = await _db.BlogPosts.FirstOrDefaultAsync(x => x.Id == id);
+        if (entity is null) return NotFound();
+        if (entity.AuthorId != uid) return Forbid();
+
+        if (!string.Equals(entity.Title, dto.Title, StringComparison.Ordinal))
+        {
+            var baseSlug = SlugHelper.ToSlug(dto.Title);
+            var slug = baseSlug;
+            int i = 2;
+            while (await _db.BlogPosts.AnyAsync(x => x.Slug == slug))
+            {
+                slug = $"{baseSlug}-{i}";
+                i++;
+
+            }
+
+            entity.Slug = slug;
+            entity.Title = dto.Title;
+        }
+        else
+        {
+            entity.Title = dto.Title;
+        }
+
+        entity.Content = dto.Content;
+        entity.IsPublished = dto.IsPublished;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+
+
     
-    
+
 
     
 }
